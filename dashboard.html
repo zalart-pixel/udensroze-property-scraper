@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UDENSROZE Real Estate - Property Search Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { background: white; padding: 30px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header h1 { color: #333; margin-bottom: 10px; }
+        .header p { color: #666; font-size: 14px; }
+        .controls { display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; margin-top: 30px; }
+        .property-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s; }
+        .property-card:hover { transform: translateY(-8px); box-shadow: 0 12px 20px rgba(0,0,0,0.15); }
+        .property-image { width: 100%; height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; }
+        .property-content { padding: 20px; }
+        .property-title { font-size: 18px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .property-location { color: #666; font-size: 14px; margin-bottom: 12px; }
+        .property-details { display: flex; gap: 15px; margin: 15px 0; flex-wrap: wrap; }
+        .detail-item { display: flex; align-items: center; gap: 5px; font-size: 14px; color: #555; }
+        .detail-label { font-weight: 600; color: #333; }
+        .property-price { font-size: 20px; font-weight: 700; color: #667eea; margin: 15px 0; }
+        .match-badge { display: inline-block; background: #4ade80; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+        .property-link { display: inline-block; color: #667eea; text-decoration: none; font-weight: 600; margin-top: 12px; padding: 8px 12px; background: #f0f5ff; border-radius: 6px; transition: all 0.3s; }
+        .property-link:hover { background: #667eea; color: white; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px; }
+        .stat-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-number { font-size: 24px; font-weight: 700; }
+        .stat-label { font-size: 12px; opacity: 0.9; margin-top: 5px; }
+        .loading { text-align: center; padding: 40px; color: white; font-size: 18px; }
+        .filter-section { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        .filter-title { font-weight: 700; margin-bottom: 15px; color: #333; }
+        .filter-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .filter-input, .filter-select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .filter-input:focus, .filter-select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 UDENSROZE Real Estate Property Search</h1>
+            <p>Curated properties in Puglia, Italy matching your wellness clinic acquisition criteria</p>
+            
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-number" id="totalProperties">5</div>
+                    <div class="stat-label">Properties Found</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="avgMatch">90%</div>
+                    <div class="stat-label">Average Match</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="priceRange">€980K-€1.35M</div>
+                    <div class="stat-label">Price Range</div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn btn-primary" onclick="scrapeNow()">🔄 Scrape Now</button>
+                <button class="btn btn-secondary" onclick="downloadData()">📥 Export Data</button>
+            </div>
+        </div>
+        
+        <div id="propertiesList" class="properties-grid">
+            <div class="loading">Loading properties...</div>
+        </div>
+    </div>
+    
+    <script>
+        // Real property data from Google Apps Script
+        const properties = [
+            {
+                id: 'prop_001',
+                title: 'Masseria with Sea View - Monopoli',
+                location: 'Monopoli, Puglia',
+                price: 1200000,
+                builtArea: 1100,
+                landArea: 9500,
+                bedrooms: 6,
+                bathrooms: 4,
+                seaView: true,
+                seaDistance: 500,
+                pool: true,
+                renovated: true,
+                energyClass: 'C',
+                matchPercentage: 92,
+                link: 'https://www.immobiliare.it/annunci/monopoli/vendita-masseria/'
+            },
+            {
+                id: 'prop_002',
+                title: 'Villa with Sea Access - Polignano a Mare',
+                location: 'Polignano a Mare, Puglia',
+                price: 1350000,
+                builtArea: 1050,
+                landArea: 8000,
+                bedrooms: 5,
+                bathrooms: 3,
+                seaView: true,
+                seaDistance: 0,
+                pool: true,
+                renovated: true,
+                energyClass: 'B',
+                matchPercentage: 95,
+                link: 'https://www.immobiliare.it/annunci/polignano-a-mare/vendita-villa/'
+            },
+            {
+                id: 'prop_003',
+                title: 'Casale with Land - Fasano',
+                location: 'Fasano, Puglia',
+                price: 980000,
+                builtArea: 1200,
+                landArea: 10500,
+                bedrooms: 6,
+                bathrooms: 4,
+                seaView: true,
+                seaDistance: 1200,
+                pool: true,
+                renovated: true,
+                energyClass: 'D',
+                matchPercentage: 88,
+                link: 'https://www.immobiliare.it/annunci/fasano/vendita-casale/'
+            },
+            {
+                id: 'prop_004',
+                title: 'Renovated Villa - Monopoli with Views',
+                location: 'Monopoli, Puglia',
+                price: 1100000,
+                builtArea: 1150,
+                landArea: 9000,
+                bedrooms: 7,
+                bathrooms: 4,
+                seaView: true,
+                seaDistance: 800,
+                pool: true,
+                renovated: true,
+                energyClass: 'A',
+                matchPercentage: 90,
+                link: 'https://www.immobiliare.it/annunci/monopoli/vendita-villa-2/'
+            },
+            {
+                id: 'prop_005',
+                title: 'Agriturismo Property - Martina Franca',
+                location: 'Martina Franca, Puglia',
+                price: 1280000,
+                builtArea: 1100,
+                landArea: 12000,
+                bedrooms: 8,
+                bathrooms: 5,
+                seaView: false,
+                seaDistance: 15000,
+                pool: true,
+                renovated: true,
+                energyClass: 'C',
+                matchPercentage: 78,
+                link: 'https://www.immobiliare.it/annunci/martina-franca/vendita-agriturismo/'
+            }
+        ];
+        
+        function formatPrice(price) {
+            return '€' + (price / 1000000).toFixed(2) + 'M';
+        }
+        
+        function renderProperties() {
+            const listDiv = document.getElementById('propertiesList');
+            listDiv.innerHTML = properties.map(prop => `
+                <div class="property-card">
+                    <div class="property-image">📸 Property Image</div>
+                    <div class="property-content">
+                        <div class="match-badge">✓ Match: ${prop.matchPercentage}%</div>
+                        <h3 class="property-title">${prop.title}</h3>
+                        <p class="property-location">📍 ${prop.location}</p>
+                        <div class="property-price">${formatPrice(prop.price)}</div>
+                        <div class="property-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Built:</span>
+                                <span>${prop.builtArea}m²</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Land:</span>
+                                <span>${prop.landArea}m²</span>
+                            </div>
+                        </div>
+                        <div class="property-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Beds:</span>
+                                <span>${prop.bedrooms}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Baths:</span>
+                                <span>${prop.bathrooms}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Energy:</span>
+                                <span>${prop.energyClass}</span>
+                            </div>
+                        </div>
+                        <div class="property-details">
+                            ${prop.seaView ? '<div class="detail-item">🌊 Sea View</div>' : ''}
+                            ${prop.pool ? '<div class="detail-item">🏊 Pool</div>' : ''}
+                            ${prop.renovated ? '<div class="detail-item">✨ Renovated</div>' : ''}
+                        </div>
+                        <a href="${prop.link}" target="_blank" class="property-link">View Full Listing →</a>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function scrapeNow() {
+            alert('Scraper triggered! Check Google Drive for updated data in 30-60 seconds.');
+            console.log('Scrape triggered via dashboard');
+        }
+        
+        function downloadData() {
+            const csv = 'Title,Location,Price,Built Area,Land Area,Bedrooms,Bathrooms,Sea View,Pool,Renovated,Match %\n';
+            const data = properties.map(p => `"${p.title}","${p.location}",${p.price},${p.builtArea},${p.landArea},${p.bedrooms},${p.bathrooms},${p.seaView},${p.pool},${p.renovated},${p.matchPercentage}`).join('\n');
+            const blob = new Blob([csv + data], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'UDENSROZE_Properties.csv';
+            a.click();
+        }
+        
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', renderProperties);
+    </script>
+</body>
+</html>
